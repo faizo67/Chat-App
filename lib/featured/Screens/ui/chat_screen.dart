@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 import 'package:chat_app/core/utils/constants/Size.dart';
 import 'package:chat_app/featured/Screens/widget/customWidget/chat_Bubble_item.dart';
 import 'package:chat_app/featured/auth/service/auth_service.dart';
@@ -6,6 +7,7 @@ import 'package:chat_app/featured/auth/widget/my_textField.dart';
 import 'package:chat_app/featured/services/chat/chat_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ChatScreen extends StatelessWidget {
   final String receiverName;
@@ -22,9 +24,19 @@ class ChatScreen extends StatelessWidget {
   // send Message
   void sendMessage() async {
     if (messageController.text.isNotEmpty) {
-      await _chatServices.sendMessage(receiverID, messageController.text);
-
+      await _chatServices.sendMessage(receiverID, messageController.text, null);
       messageController.clear();
+    }
+  }
+
+  // send Image
+  void sendImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      await _chatServices.sendMessage(receiverID, null, imageFile);
     }
   }
 
@@ -114,6 +126,17 @@ class ChatScreen extends StatelessWidget {
   Widget _buildUserInput() {
     return Row(
       children: [
+        Container(
+          decoration: BoxDecoration(
+              color: Colors.green.shade500,
+              borderRadius: BorderRadius.circular(50)),
+          child: IconButton(
+              onPressed: () => sendImage(),
+              icon: Icon(
+                Icons.image,
+                color: Colors.white,
+              )),
+        ),
         // textfield
         Expanded(
           child: MyTextfield(

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:chat_app/featured/services/models/message.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ChatServices {
   // get instance of FireBase
@@ -73,7 +76,8 @@ class ChatServices {
   }
 
   // send Message
-  Future<void> sendMessage(String receiverID, String message) async {
+  Future<void> sendMessage(
+      String receiverID, String? message, File? imageFile) async {
     // get current user
     final String userID = _auth.currentUser!.uid;
     final String userEmail = _auth.currentUser!.email!;
@@ -81,7 +85,7 @@ class ChatServices {
 
     // create new message
     Message newMessage = Message(
-        message: message,
+        message: message!,
         receiverID: receiverID,
         sendID: userID,
         senderEmail: userEmail,
@@ -93,11 +97,44 @@ class ChatServices {
     String chatRoom = ids.join('_');
 
     // add new message to database
-    await firestore
+    if (imageFile != null) {
+      try {
+        // Generate a unique file name for each image
+        String fileName =
+            'uploads/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        // Create a reference to Firebase Storage
+        final storageRef = FirebaseStorage.instance.ref().child(fileName);
+
+        // Upload the file to Firebase Storage
+        await storageRef.putFile(imageFile);
+
+        // Get the download URL for the uploaded file
+        String downloadURL = storageRef.getDownloadURL() as String;
+
+        await firestore
+            .collection('Chat_room')
+            .doc(chatRoom)
+            .collection('message')
+            .add(Message(
+                    message: downloadURL,
+                    receiverID: receiverID,
+                    sendID: userID,
+                    senderEmail: userEmail,
+                    timestamp: timestamp)
+                .toMap());
+        print("Image uploaded successfully. Download URL: $downloadURL");
+      } catch (e) {
+        print("Error uploading image: $e");
+      }
+    }
+
+   else{
+     await firestore
         .collection('Chat_room')
         .doc(chatRoom)
         .collection('message')
         .add(newMessage.toMap());
+   }
   }
 
   // get Message
